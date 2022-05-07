@@ -24,9 +24,10 @@ import javassist.tools.web.BadHttpRequest;
 @Transactional
 public class GarageService {
 
+    private static final int MAX_PLATE_SIZE = 11;
     private static final int MAX_SIZE = 10;
-    private static final int GARAGE_ARRAY = 10;
-    private static final int BEFORE_LAST_SLOT = 10;
+    private static final int LAST_SLOT = 9;
+    private static final int BEFORE_LAST_SLOT = 8;
 
     @Autowired
     ITicket ticketRepository;
@@ -75,8 +76,13 @@ public class GarageService {
                         size[i] = null;
                 }
             }
-            ticketRepository.deleteById(ticketId);
-            garageMap.remove(ticket.get());
+
+            for (Map.Entry<Ticket, List<Integer>> entry : garageMap.entrySet()) {
+                if (plate.equals(entry.getKey().getPlate()))
+                    garageMap.remove(entry.getKey());
+            }
+
+            ticketRepository.deleteById(ticket.get().getId());
         }
 
     }
@@ -86,13 +92,19 @@ public class GarageService {
         List<Integer> list = new ArrayList<Integer>();
         List<String> plateList = new ArrayList<String>();
         Collections.addAll(plateList, size);
-        
-        String regex = "(0[1-9]|[1-7][0-9]|8[01])(([\\-][A-Z][\\-])(\\d{4,5})|([\\-][A-Z][\\-]{2})(\\d{3,4})|([\\-][A-Z][\\-]{3})(\\d{2}))";
-
+        String plate = ticket.getPlate();
+        String regex = "(0[1-9]|[1-7][0-9]|8[01])(([\\-][A-Z][\\-])(\\d{4,5})|([\\-][A-Z]{2}[\\-])(\\d{3,4})|([\\-][A-Z]{3}[\\-])(\\d{2}))";
+        String regexChar = ".*[a-zA-Z].*";
         Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(ticket.getPlate());
+        Pattern patternChar = Pattern.compile(regexChar);
 
-        if (!matcher.find())
+        String[] parts = plate.split("-");
+        String lastPart = parts[2].trim();
+
+        Matcher matcher = pattern.matcher(plate);
+        Matcher matcherText = patternChar.matcher(lastPart);
+
+        if (!matcher.find() || matcherText.find() || plate.length() > MAX_PLATE_SIZE)
             throw new RuntimeException("Wrong Plate Format");
 
         if (plateList.contains(ticket.getPlate()))
@@ -106,10 +118,10 @@ public class GarageService {
 
         int allocation = ticket.getVehicle().getAllocation();
 
-        if (busyLots + allocation > 10)
+        if (busyLots + allocation > MAX_SIZE)
             throw new RuntimeException("Garage is Full");
 
-        for (int i = 0; i < GARAGE_ARRAY; i++) {
+        for (int i = 0; i < LAST_SLOT; i++) {
             if (i == BEFORE_LAST_SLOT && start < (allocation - start)) {
                 for (int j = start; j > 0; j--) {
                     Integer idx = list.get(j);

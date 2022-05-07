@@ -45,7 +45,7 @@ public class GarageControllerTest {
 
     @Test
     void shouldParkSuccesfully() throws Exception {
-        Ticket ticket = new Ticket(1, "34TC1234", "Red", Vehicle.CAR);
+        Ticket ticket = new Ticket(1, "34-TC-1234", "Red", Vehicle.CAR);
 
         Mockito.when(garageService.park(ticket)).thenReturn(ticket);
 
